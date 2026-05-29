@@ -79,7 +79,7 @@ jobs:
     name: Terraform Plan
     runs-on: self-hosted
     needs: test
-    if: github.event_name == 'pull_request'
+    #if: github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v4
@@ -112,8 +112,8 @@ jobs:
     name: Deploy to OpenStack
     runs-on: self-hosted
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
+    #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    #environment: production
 
     steps:
       - uses: actions/checkout@v4
