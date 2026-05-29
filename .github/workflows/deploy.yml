@@ -20,6 +20,7 @@ on:
     #   default: staging
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   TF_VERSION: "1.9.0"
   ANSIBLE_VERSION: "10.0.0"
 
