@@ -134,7 +134,21 @@ jobs:
       - name: Terraform Init
         working-directory: terraform
         run: terraform init -reconfigure
-
+      - name: Cleanup OpenStack resources before apply
+        run: |
+          source /home/sage/kolla-venv/bin/activate
+          export OS_PROJECT_DOMAIN_NAME='Default'
+          export OS_USER_DOMAIN_NAME='Default'
+          export OS_PROJECT_NAME='admin'
+          export OS_USERNAME='admin'
+          export OS_PASSWORD='${{ secrets.OS_PASSWORD }}'
+          export OS_AUTH_URL='http://192.168.131.100:5000'
+          export OS_INTERFACE='public'
+          export OS_IDENTITY_API_VERSION='3'
+          export OS_REGION_NAME='RegionOne'
+          openstack keypair delete counter-key 2>/dev/null || true
+          openstack security group delete counter-app-sg 2>/dev/null || true
+        shell: bash
       - name: Terraform Apply
         working-directory: terraform
         env:
