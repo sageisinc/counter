@@ -160,6 +160,20 @@ jobs:
           terraform apply -auto-approve
           echo "APP_SERVER_IP=$(terraform output -raw app_server_ip)" >> $GITHUB_ENV
 
+      - name: Wait for OpenStack resources
+        run: |
+          echo "Waiting for OpenStack resources to be ready..."
+          sleep 60
+      - name: Show Terraform outputs
+        working-directory: terraform
+        run: terraform output -no-color
+      - name: Show app server IP
+        run: echo "App Server IP: ${{ env.APP_SERVER_IP }}"
+      - name: PIP upgrade
+        run: |
+          python3 -m pip install --upgrade pip --break-system-packages
+          python3 -m pip cache purge
+          python3 -m pip install "ansible==${{ env.ANSIBLE_VERSION }}" --break-system-packages --no-cache-dir
       - name: Generate Ansible inventory
         run: |
           envsubst < ansible/inventory.ini.tpl > ansible/inventory.ini
