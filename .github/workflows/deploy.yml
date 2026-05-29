@@ -172,7 +172,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip --break-system-packages
           python3 -m pip cache purge
-          python3 -m pip install "ansible==${{ env.ANSIBLE_VERSION }}" --break-system-packages --no-cache-dir
+          python3 -m pip install "ansible>=10.0.0,<11.0.0" --break-system-packages --no-cache-dir
       - name: Generate Ansible inventory
         run: |
           envsubst < ansible/inventory.ini.tpl > ansible/inventory.ini
