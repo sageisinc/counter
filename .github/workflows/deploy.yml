@@ -5,6 +5,19 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    # inputs:
+    #   name:
+    #   description: 'Who to greet'
+    #   required: true
+    #   default: 'World'
+    # environment:
+    #   description: 'Deployment environment'
+    #   type: choice
+    #   options:
+    #   - staging
+    #   - production
+    #   default: staging
 
 env:
   TF_VERSION: "1.9.0"
@@ -138,7 +151,8 @@ jobs:
           cat ansible/inventory.ini
 
       - name: Install Ansible
-        run: pip install "ansible==${{ env.ANSIBLE_VERSION }}"
+        run: |
+          pip install "ansible==${{ env.ANSIBLE_VERSION }}" --break-system-packages
 
       - name: Wait for SSH
         run: |
