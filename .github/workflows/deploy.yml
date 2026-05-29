@@ -14,7 +14,7 @@ jobs:
   # ─── Test ───────────────────────────────────────────────
   test:
     name: Test Application
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     services:
       postgres:
         image: postgres:16-alpine
@@ -63,7 +63,7 @@ jobs:
   # ─── Terraform Plan ──────────────────────────────────────
   terraform-plan:
     name: Terraform Plan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: test
     if: github.event_name == 'pull_request'
 
@@ -96,7 +96,7 @@ jobs:
   # ─── Deploy ──────────────────────────────────────────────
   deploy:
     name: Deploy to OpenStack
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
