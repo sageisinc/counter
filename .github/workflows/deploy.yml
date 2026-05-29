@@ -167,8 +167,7 @@ jobs:
       - name: Show Terraform outputs
         working-directory: terraform
         run: terraform output -no-color
-      - name: Show app server IP
-        run: echo "App Server IP: ${{ env.APP_SERVER_IP }}"
+     
       - name: PIP upgrade
         run: |
           python3 -m pip install --upgrade pip --break-system-packages
