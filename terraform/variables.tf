@@ -55,7 +55,7 @@ variable "flavor_name" {
 variable "db_password" {
   description = "PostgreSQL password"
   sensitive   = true
-  default     = "CounterSecure123!"
+  default     = "Sage@2022"
 }
 
 variable "app_secret_key" {
