@@ -23,6 +23,9 @@ provider "openstack" {
 resource "openstack_networking_secgroup_v2" "counter_sg" {
   name        = "counter-sg"
   description = "Counter app security group"
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 resource "openstack_networking_secgroup_rule_v2" "ssh" {
@@ -63,6 +66,9 @@ resource "openstack_networking_secgroup_rule_v2" "icmp" {
 resource "openstack_compute_keypair_v2" "counter_keypair" {
   name       = "counter-key"
   public_key = var.ssh_public_key
+  lifecycle {
+    ignore_changes = [public_key]
+  }
 }
 
 # Use existing network (created by the demo terraform)
