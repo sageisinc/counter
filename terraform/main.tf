@@ -5,10 +5,8 @@ terraform {
       version = "~> 3.0"
     }
   }
-  backend "s3" {
-    # Configure via env vars or backend config file
-    # TF_VAR_bucket, TF_VAR_key, etc.
-    # Or use local backend for simplicity
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 
