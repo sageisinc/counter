@@ -11,7 +11,7 @@
   post_tasks:
     - name: Verify app is running
       uri:
-        url: "http://localhost:{{ app_port }}"
+        url: "http://192.168.4.84:{{ app_port }}"
         status_code:
           - 200
           - 302
