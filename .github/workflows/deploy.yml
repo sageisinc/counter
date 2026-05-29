@@ -180,7 +180,7 @@ jobs:
 
       - name: Install Ansible
         run: |
-          pip install "ansible==${{ env.ANSIBLE_VERSION }},<11.0.0" --break-system-packages
+          pip install "ansible>=10.0.0,<11.0.0" --break-system-packages
 
       - name: Wait for SSH
         run: |
