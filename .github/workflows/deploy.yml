@@ -111,7 +111,7 @@ jobs:
   deploy:
     name: Deploy to OpenStack
     runs-on: self-hosted
-    needs: test
+    needs: [test, terraform-plan]
     #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     #environment: production
 
