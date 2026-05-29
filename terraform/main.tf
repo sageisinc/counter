@@ -89,8 +89,8 @@ resource "openstack_compute_instance_v2" "app_server" {
   name            = "counter"
   image_name      = var.image_name
   flavor_name     = var.flavor_name
-  key_pair        = openstack_compute_keypair_v2.counter_keypair.name
-  security_groups = [openstack_networking_secgroup_v2.counter_sg.name]
+  key_pair        = openstack_compute_keypair_v2.counter_keypair.id
+  security_groups = [openstack_networking_secgroup_v2.counter_sg.id]
 
   network {
     uuid = data.openstack_networking_network_v2.app_network.id
