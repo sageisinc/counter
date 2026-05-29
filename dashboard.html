@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Counter App{% endblock %}
+{% block navbar %}
+<nav class="navbar">
+  <h1>🔢 Counter App</h1>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <span style="color:#94a3b8;">Hello, <strong style="color:#38bdf8;">{{ username }}</strong></span>
+    <a href="/logout">Logout</a>
+  </div>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+    <h2 style="color:#e2e8f0;">My Counters</h2>
+    <button class="btn btn-primary" onclick="showNewCounterModal()">+ New Counter</button>
+  </div>
+
+  <div id="counters-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
+    {% for counter in counters %}
+    <div class="card counter-card" id="counter-{{ counter.id }}" style="text-align:center;">
+      <h3 style="color:#94a3b8;font-size:0.9rem;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em;">{{ counter.name }}</h3>
+      <div class="counter-value" style="font-size:4rem;font-weight:800;color:#38bdf8;line-height:1;margin:1rem 0;">{{ counter.value }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.8rem;">
+        <button class="btn btn-success" onclick="countUp({{ counter.id }})">▲ Up</button>
+        <button class="btn btn-danger" onclick="countDown({{ counter.id }})">▼ Down</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.8rem;">
+        <button class="btn btn-warning" onclick="countReset({{ counter.id }})">↺ Reset</button>
+        <button class="btn btn-secondary" onclick="showSetModal({{ counter.id }}, {{ counter.value }})">✎ Set</button>
+      </div>
+      <button class="btn btn-danger" style="width:100%;font-size:0.8rem;padding:0.4rem;" onclick="deleteCounter({{ counter.id }})">🗑 Delete</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if not counters %}
+  <div style="text-align:center;padding:4rem;color:#475569;">
+    <div style="font-size:4rem;margin-bottom:1rem;">🔢</div>
+    <p style="font-size:1.2rem;">No counters yet. Create your first one!</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- New Counter Modal -->
+<div id="new-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:380px;">
+    <h3 style="margin-bottom:1.5rem;color:#38bdf8;">New Counter</h3>
+    <div class="form-group">
+      <label>Counter Name</label>
+      <input type="text" id="new-name" placeholder="e.g. Steps Today" value="My Counter">
+    </div>
+    <div class="form-group">
+      <label>Start Value</label>
+      <input type="number" id="new-start" value="0">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-secondary" onclick="hideModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="createCounter()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Set Value Modal -->
+<div id="set-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:320px;">
+    <h3 style="margin-bottom:1.5rem;color:#38bdf8;">Set Value</h3>
+    <div class="form-group">
+      <label>New Value</label>
+      <input type="number" id="set-value">
+    </div>
+    <input type="hidden" id="set-counter-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-secondary" onclick="hideModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="setValue()">Set</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showNewCounterModal() {
+  document.getElementById('new-modal').style.display = 'flex';
+}
+function showSetModal(id, val) {
+  document.getElementById('set-counter-id').value = id;
+  document.getElementById('set-value').value = val;
+  document.getElementById('set-modal').style.display = 'flex';
+}
+function hideModals() {
+  document.querySelectorAll('[id$="-modal"]').forEach(m => m.style.display = 'none');
+}
+
+function updateDisplay(id, value) {
+  const card = document.getElementById('counter-' + id);
+  if (card) card.querySelector('.counter-value').textContent = value;
+}
+
+async function countUp(id) {
+  const r = await fetch('/api/counter/' + id + '/up', {method:'POST'});
+  const d = await r.json();
+  updateDisplay(id, d.value);
+}
+async function countDown(id) {
+  const r = await fetch('/api/counter/' + id + '/down', {method:'POST'});
+  const d = await r.json();
+  updateDisplay(id, d.value);
+}
+async function countReset(id) {
+  const r = await fetch('/api/counter/' + id + '/reset', {method:'POST'});
+  const d = await r.json();
+  updateDisplay(id, d.value);
+}
+async function setValue() {
+  const id = document.getElementById('set-counter-id').value;
+  const value = document.getElementById('set-value').value;
+  const r = await fetch('/api/counter/' + id + '/set', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({value: parseInt(value)})
+  });
+  const d = await r.json();
+  updateDisplay(id, d.value);
+  hideModals();
+}
+async function createCounter() {
+  const name = document.getElementById('new-name').value;
+  const start = parseInt(document.getElementById('new-start').value) || 0;
+  const r = await fetch('/api/counter', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, start})
+  });
+  const d = await r.json();
+  hideModals();
+  location.reload();
+}
+async function deleteCounter(id) {
+  if (!confirm('Delete this counter?')) return;
+  await fetch('/api/counter/' + id, {method:'DELETE'});
+  document.getElementById('counter-' + id).remove();
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('[id$="-modal"]').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) hideModals(); });
+});
+</script>
+{% endblock %}
