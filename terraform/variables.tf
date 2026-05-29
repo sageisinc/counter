@@ -61,5 +61,5 @@ variable "db_password" {
 variable "app_secret_key" {
   description = "Flask secret key"
   sensitive   = true
-  default     = "change-me-in-production"
+  default     = "flask-secret-2026-counter"
 }
