@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  app:
+    build: ./app
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://counter:CounterSecure123!@192.168.4.84:5432/counterdb
+      SECRET_KEY: change-me-in-production
+    command: >
+      sh -c "python -c 'import sys; sys.path.insert(0,\".\"); from app import app, db; app.app_context().push(); db.create_all()' &&
+             gunicorn --bind 0.0.0.0:5000 --workers 2 app:app"

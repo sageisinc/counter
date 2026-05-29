@@ -30,7 +30,7 @@ docker-compose up -d
 
 ## Project Structure
 ```
-counter-app/
+counter/
 ├── app/                    # Flask application
 │   ├── app.py             # Main application
 │   ├── requirements.txt

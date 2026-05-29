@@ -1,0 +1,65 @@
+---
+- name: Install system dependencies
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - git
+      - build-essential
+      - libpq-dev
+    state: present
+    update_cache: yes
+
+- name: Create app directory
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+
+- name: Clone/update repository
+  git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_dir }}"
+    version: "{{ app_version }}"
+    force: yes
+  become_user: "{{ app_user }}"
+
+- name: Create Python virtual environment
+  command: python3 -m venv "{{ app_dir }}/venv"
+  args:
+    creates: "{{ app_dir }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Install Python dependencies
+  pip:
+    requirements: "{{ app_dir }}/app/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Initialize database tables
+  command: >
+    {{ app_dir }}/venv/bin/python -c
+    "import sys; sys.path.insert(0,'app'); from app import app, db; app.app_context().push(); db.create_all()"
+  args:
+    chdir: "{{ app_dir }}"
+  environment:
+    DATABASE_URL: "postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }}"
+    SECRET_KEY: "{{ app_secret_key }}"
+  become_user: "{{ app_user }}"
+
+- name: Deploy systemd service
+  template:
+    src: counter.service.j2
+    dest: /etc/systemd/system/counter.service
+    mode: "0644"
+  notify: restart counter
+
+- name: Enable and start counter service
+  systemd:
+    name: counter
+    enabled: yes
+    state: started
+    daemon_reload: yes

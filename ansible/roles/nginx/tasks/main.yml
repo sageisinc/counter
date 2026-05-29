@@ -1,0 +1,30 @@
+---
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Deploy Nginx config
+  template:
+    src: counter.nginx.j2
+    dest: /etc/nginx/sites-available/counter
+  notify: restart nginx
+
+- name: Enable site
+  file:
+    src: /etc/nginx/sites-available/counter
+    dest: /etc/nginx/sites-enabled/counter
+    state: link
+  notify: restart nginx
+
+- name: Remove default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: restart nginx
+
+- name: Start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes

@@ -1,0 +1,13 @@
+app_user: ubuntu
+app_dir: /opt/counter
+app_repo: "{{ lookup('env', 'APP_REPO') | default('https://github.com/yourorg/counter') }}"
+app_version: "{{ lookup('env', 'GITHUB_SHA') | default('main') }}"
+
+db_name: counterdb
+db_user: counter
+db_password: "{{ lookup('env', 'DB_PASSWORD') | default('CounterSecure123!') }}"
+db_host: 192.168.4.84
+db_port: 5432
+
+app_secret_key: "{{ lookup('env', 'APP_SECRET_KEY') | default('change-me') }}"
+app_port: 5000

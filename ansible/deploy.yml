@@ -1,0 +1,25 @@
+---
+- name: Deploy Counter App
+  hosts: app_servers
+  become: yes
+
+  roles:
+    - postgresql
+    - app
+    - nginx
+
+  post_tasks:
+    - name: Verify app is running
+      uri:
+        url: "http://localhost:{{ app_port }}"
+        status_code:
+          - 200
+          - 302
+      register: result
+      retries: 5
+      delay: 10
+      until: result.status in [200, 302]
+
+    - name: App deployment successful
+      debug:
+        msg: "Counter app deployed at http://{{ ansible_host }}"
