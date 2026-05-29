@@ -29,7 +29,6 @@ resource "openstack_networking_secgroup_v2" "counter_sg" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "ssh" {
-  name              = "counter-sg-rule-22"
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -39,7 +38,6 @@ resource "openstack_networking_secgroup_rule_v2" "ssh" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "http" {
-  name              = "counter-sg-rule-80"
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -49,7 +47,6 @@ resource "openstack_networking_secgroup_rule_v2" "http" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "app" {
-  name              = "counter-sg-rule-5000"
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -59,7 +56,6 @@ resource "openstack_networking_secgroup_rule_v2" "app" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "icmp" {
-  name              = "counter-sg-rule-icmp"
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "icmp"
