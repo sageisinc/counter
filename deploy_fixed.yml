@@ -1,0 +1,183 @@
+name: CI/CD - Counter
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  TF_VERSION: "1.9.0"
+  ANSIBLE_VERSION: "10.0.0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ─── Test ───────────────────────────────────────────────
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: counterdb_test
+          POSTGRES_USER: counter
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r app/requirements.txt
+
+      - name: Run smoke test
+        env:
+          DATABASE_URL: postgresql://counter:testpassword@localhost:5432/counterdb_test
+          SECRET_KEY: test-secret
+        run: |
+          cd app
+          python -c "
+          from app import app, db
+          with app.app_context():
+              db.create_all()
+              print('DB init OK')
+          with app.test_client() as c:
+              r = c.get('/')
+              assert r.status_code in [200, 302], f'Got {r.status_code}'
+              print('App smoke test OK')
+          "
+
+  # ─── Deploy ──────────────────────────────────────────────
+  deploy:
+    name: Deploy to OpenStack
+    runs-on: self-hosted
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/counter_deploy_key
+          chmod 600 ~/.ssh/counter_deploy_key
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/counter_deploy_key.pub
+
+      - name: Cleanup existing OpenStack resources
+        shell: bash
+        run: |
+          source /home/sage/kolla-venv/bin/activate
+          export OS_PROJECT_DOMAIN_NAME='Default'
+          export OS_USER_DOMAIN_NAME='Default'
+          export OS_PROJECT_NAME='admin'
+          export OS_USERNAME='admin'
+          export OS_PASSWORD='${{ secrets.OS_PASSWORD }}'
+          export OS_AUTH_URL='http://192.168.131.100:5000'
+          export OS_INTERFACE='public'
+          export OS_IDENTITY_API_VERSION='3'
+          export OS_REGION_NAME='RegionOne'
+
+          echo "Cleaning up existing resources..."
+
+          # Delete servers named counter
+          for id in $(openstack server list -f value | grep counter | awk '{print $1}'); do
+            openstack server delete $id 2>/dev/null && echo "Deleted server $id" || true
+          done
+
+          # Wait for servers to be deleted
+          sleep 10
+
+          # Delete unattached floating IPs
+          for id in $(openstack floating ip list -f value | awk '$4 == "None" {print $1}'); do
+            openstack floating ip delete $id 2>/dev/null && echo "Deleted FIP $id" || true
+          done
+
+          # Delete keypair
+          openstack keypair delete counter-key 2>/dev/null && echo "Deleted keypair" || echo "Keypair not found"
+
+          # Delete security groups named counter-sg
+          for id in $(openstack security group list -f value | grep counter-sg | awk '{print $1}'); do
+            openstack security group delete $id 2>/dev/null && echo "Deleted SG $id" || true
+          done
+
+          echo "Cleanup complete"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -reconfigure
+
+      - name: Terraform Apply
+        working-directory: terraform
+        env:
+          TF_VAR_os_password: ${{ secrets.OS_PASSWORD }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_app_secret_key: ${{ secrets.APP_SECRET_KEY }}
+        run: |
+          terraform apply -auto-approve
+          echo "APP_SERVER_IP=$(terraform output -raw app_server_ip)" >> $GITHUB_ENV
+
+      - name: Generate Ansible inventory
+        run: |
+          envsubst < ansible/inventory.ini.tpl > ansible/inventory.ini
+          cat ansible/inventory.ini
+
+      - name: Install Ansible
+        run: |
+          pip install "ansible==${{ env.ANSIBLE_VERSION }}" --break-system-packages
+
+      - name: Wait for SSH
+        run: |
+          echo "Waiting for VM at ${{ env.APP_SERVER_IP }} to be ready..."
+          for i in $(seq 1 60); do
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+              -i ~/.ssh/counter_deploy_key ubuntu@${{ env.APP_SERVER_IP }} \
+              "echo ready" 2>/dev/null && echo "SSH ready!" && break
+            echo "Waiting for SSH... ($i/60)"
+            sleep 15
+          done
+
+      - name: Run Ansible playbook
+        working-directory: ansible
+        env:
+          APP_REPO: https://github.com/sageisinc/counter
+          GITHUB_SHA: ${{ github.sha }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+        run: |
+          ansible-playbook -i inventory.ini deploy.yml -v
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -f http://${{ env.APP_SERVER_IP }} || exit 1
+          echo "Deployment verified!"
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "### Deployment Successful! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** http://${{ env.APP_SERVER_IP }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
